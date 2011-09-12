@@ -1,0 +1,105 @@
+#!/usr/bin/python3
+#+
+# This script processes jni.h from the Android NDK to produce
+# C glue routines to simplify invoking the JNI callbacks.
+# Pass the .h file as standard input, to get a new .h file
+# as standard output.
+#
+# Created by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
+#-
+
+import sys
+import re
+
+prefix = "JN"
+curdecl = None
+curname = None
+currestype = None
+started_decls = False
+while True :
+    line = sys.stdin.readline()
+    if line == "" :
+        if curdecl != None :
+            raise RuntimeError("incomplete declaration \"%s\"" % curdecl)
+        #end if
+        break
+    #end if
+    if started_decls :
+        if re.search(r"\}", line) != None :
+            started_decls = False
+        elif curdecl == None :
+            match = re.search(r"^\s*(.*\w)\s*\(\*(\w+)\)\(", line)
+            if match != None :
+                curdecl = "" # tell below to append line
+                currestype = match.group(1)
+                curname = match.group(2)
+                line = line[match.end():]
+            #end if
+        #end if
+        if curdecl != None :
+            match = re.search(r"\)\;", line)
+            if match != None :
+                curdecl += line.rstrip("\n")[:match.start()]
+                args = list(arg.strip() for arg in curdecl.split(","))
+                if re.search(r"^JNIEnv\s*\*", args[0]) == None :
+                    raise RuntimeError("first arg \"%s\" is not JNIEnv*" % args[0])
+                #end if
+                if args[-1] == "..." :
+                    vararg = args[-2]
+                    args = args[:-1]
+                else :
+                    vararg = None
+                #end if
+                sys.stdout.write \
+                  (
+                        "static inline " + currestype + " " + prefix + curname
+                    +
+                        "(" + args[0] + " env" + "".join(", " + arg + " a%d" % (i + 1) for i, arg in enumerate(args[1:]))
+                  )
+                if vararg != None :
+                    sys.stdout.write(", ...")
+                #end if
+                sys.stdout.write(")\n")
+                sys.stdout.write("  {\n    ")
+                if vararg != None :
+                    sys.stdout.write("va_list va;\n")
+                    sys.stdout.write("    va_start(va, a%d);\n    " % (len(args) - 1))
+                    if currestype != "void" :
+                        sys.stdout.write("%s const result = " % currestype)
+                    #end if
+                else :
+                    if currestype != "void" :
+                        sys.stdout.write("return\n        ")
+                    #end if
+                #end if
+                sys.stdout.write \
+                  (
+                        "(**env)."
+                    +
+                        curname + ("", "V")[vararg != None]
+                    +
+                        "(env"
+                    +
+                        "".join(", a%d" % (i + 1) for i in range(0, len(args[1:])))
+                  )
+                if vararg != None :
+                    sys.stdout.write(", va")
+                #end if
+                sys.stdout.write(");\n")
+                if vararg != None :
+                    sys.stdout.write("    va_end(va);\n")
+                    if currestype != "void" :
+                        sys.stdout.write("    return\n        result;\n")
+                    #end if
+                #end if
+                sys.stdout.write("  } /*%s*/\n" % curname)
+                sys.stdout.write("\n")
+                curdecl = None
+            else :
+                curdecl += line.rstrip("\n")
+            #end if
+        #end if
+    elif re.search(r"struct\s+JNINativeInterface\s+\{", line) != None :
+        started_decls = True
+    #end if
+#end while
