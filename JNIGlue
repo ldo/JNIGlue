@@ -41,7 +41,7 @@ while True :
             if match != None :
                 curdecl += line.rstrip("\n")[:match.start()]
                 args = list(arg.strip() for arg in curdecl.split(","))
-                if re.search(r"^JNIEnv\s*\*", args[0]) == None :
+                if re.search(r"^JNIEnv\s*\*$", args[0]) == None :
                     raise RuntimeError("first arg \"%s\" is not JNIEnv*" % args[0])
                 #end if
                 if args[-1] == "..." :
