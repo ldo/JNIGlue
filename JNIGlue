@@ -28,7 +28,7 @@ while True :
         if re.search(r"\}", line) != None :
             started_decls = False
         elif curdecl == None :
-            match = re.search(r"^\s*(.*\w)\s*\(\*(\w+)\)\(", line)
+            match = re.search(r"^\s*(\w[\w \*]*[\w\*])\s*\(\*(\w+)\)\(", line)
             if match != None :
                 curdecl = "" # tell below to append line
                 currestype = match.group(1)
