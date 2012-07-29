@@ -92,7 +92,7 @@ while True :
                         sys.stdout.write("    return\n        result;\n")
                     #end if
                 #end if
-                sys.stdout.write("  } /*%s*/\n" % curname)
+                sys.stdout.write("  } /*%s*/\n" % (prefix + curname))
                 sys.stdout.write("\n")
                 curdecl = None
             else :
