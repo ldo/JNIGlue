@@ -1,0 +1,24 @@
+The enclosed Python script reads jni.h (for example, as included with
+the Android NDK) and generates nicer wrapper glue for calling JNI
+routines from C. For example, the FindClass routine normally has to be
+called something like this:
+
+    the_class = (**env).FindClass(env, class_name);
+
+but JNIGlue generates a wrapper that looks like this:
+
+    static inline jclass JNFindClass(JNIEnv* env, const char* a1)
+      {
+        return
+            (**env).FindClass(env, a1);
+      } /*FindClass*/
+
+allowing for slightly more convenient invocation like this:
+
+    the_class = JNFindClass(env, class_name);
+
+All the wrapper routines are generated with names consisting of the
+original JNI routine name prefixed with “JN”. If you don’t like it,
+change it.
+
+Lawrence D'Oliveiro <ldo@geek-central.gen.nz>
